@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.multi-stage
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - db
+    restart: unless-stopped
+    networks:
+      - todo-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    expose:
+      - "3000"
+    depends_on:
+      - db
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=db
+      - DB_USER=todouser
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=todoapp
+    restart: unless-stopped
+    networks:
+      - todo-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  db:
+    image: postgres:13-alpine
+    environment:
+      - POSTGRES_USER=todouser
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=todoapp
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - todo-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  postgres_data:
+
+networks:
+  todo-network:
+    driver: bridge
