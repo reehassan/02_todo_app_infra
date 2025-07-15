@@ -12,11 +12,16 @@ A modern, containerized todo application built with a static frontend (HTML, CSS
 git clone https://github.com/reehassan/01_todo_app.git
 cd 01_todo_app
 
-# Start development environment
-docker-compose --env-file .env up --build -d
+# Install backend dependencies and build
+cd backend
+npm install
+npm run build
 
-# Access the application
-http://localhost:9090
+# Go back to project root
+cd ..
+
+# Start services
+docker-compose --env-file .env up --build
 ```
 
 
@@ -101,14 +106,16 @@ http://localhost:9090
 git clone https://github.com/reehassan/01_todo_app.git
 cd 01_todo_app
 
+# Install backend dependencies and build
+cd backend
+npm install
+npm run build
+
+# Go back to project root
+cd ..
+
 # Start services
 docker-compose --env-file .env up --build
-
-# Check status
-docker-compose ps
-
-# Logs
-docker-compose logs
 ```
 
 Access:
@@ -121,7 +128,9 @@ Access:
 
 ### Production Environment
 
-1. **Create the production `.env.production` file**
+### 📁 1. Create the Production `.env.production` File
+
+In the root of your project (`01_todo_app/`), create a file named `.env.production` and add the following configuration:
 
 ```env
 # .env.production
@@ -135,13 +144,46 @@ API_PORT=3000
 WEB_PORT=80
 ```
 
-2. **Run production setup**
+> ⚠️ Replace `yourpassword` with a secure password.
+
+---
+
+### 🧱 2. Build Backend Files for Production
+
+Before running the containers, ensure the backend build artifacts are created:
+
+```bash
+cd backend
+npm install
+npm run build
+cd ..
+```
+
+---
+
+### 📦 3. Start the Production Environment
+
+Use Docker Compose with the production configuration:
 
 ```bash
 docker-compose -f docker-compose.prod.yml --env-file .env.production up --build -d
 ```
 
+---
 
+### 🔍 4. Verify Containers Are Running
+
+Check container statuses:
+
+```bash
+docker-compose -f docker-compose.prod.yml ps
+```
+
+View logs if needed:
+
+```bash
+docker-compose -f docker-compose.prod.yml logs -f
+```
 
 ## 🎮 Usage
 
