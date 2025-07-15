@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "9090:80"
+    depends_on:
+      - backend
+      - db
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html
+      - ./resources:/usr/share/nginx/html/resources
+    networks:
+      - todo-network
+
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=db
+      - DB_USER=todouser
+      - DB_PASSWORD=password
+      - DB_NAME=todoapp
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - todo-network
+    command: npm run dev
+
+  db:
+    image: postgres:13-alpine
+    environment:
+      - POSTGRES_USER=todouser
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=todoapp
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - todo-network
+
+volumes:
+  postgres_data:
+
+networks:
+  todo-network:
+    driver: bridge
