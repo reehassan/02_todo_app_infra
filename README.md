@@ -1,430 +1,258 @@
+# 📝 Todo App Infrastructure
 
-# Full Stack Todo Application with Devops
+A full-stack Todo application deployed on **AWS** using **Terraform** for Infrastructure as Code (IaC), **Docker** for containerization, and **PostgreSQL on AWS RDS** for the database.
 
-A modern, containerized todo application built with a static frontend (HTML, CSS, JavaScript), a Node.js backend, and a PostgreSQL database. This project demonstrates Docker fundamentals, container orchestration with Docker Compose, and DevOps best practices.
-
-
-
-## 🚀 Quick Start
-
-```bash
-# Clone the repository
-git clone https://github.com/reehassan/01_todo_app.git
-cd 01_todo_app
-
-# Install backend dependencies and build
-cd backend
-npm install
-npm run build
-
-# Go back to project root
-cd ..
-
-# Start services
-docker-compose --env-file .env up --build
-```
-
-
-
-## 📋 Table of Contents
-
-* [Features](#features)
-* [Architecture](#architecture)
-* [Prerequisites](#prerequisites)
-* [Installation](#installation)
-* [Usage](#usage)
-* [Docker Commands](#docker-commands)
-* [API Documentation](#api-documentation)
-* [Development](#development)
-* [Production Deployment](#production-deployment)
-* [Monitoring & Logging](#monitoring--logging)
-* [Troubleshooting](#troubleshooting)
-* [Performance Optimization](#performance-optimization)
-* [Security](#security)
-* [Contributing](#contributing)
-* [License](#license)
-* [Support](#support)
-* [Learning Objectives](#learning-objectives)
-* [Next Steps](#next-steps)
-
-
-
-## ✨ Features
-
-### App Features
-
-* ✅ Add, edit, delete todos
-* ✅ Mark todos as complete/incomplete
-* ✅ Persistent PostgreSQL storage
-* ✅ Responsive UI
-* ✅ Real-time updates
-
-### DevOps Features
-
-* 🐳 Fully containerized with Docker
-* 🏗️ Multi-stage Docker builds
-* 🎼 Docker Compose orchestration
-* 🔒 Basic security hardening
-* 🩺 Health checks
-* 🚀 Production-ready setup
-* 📚 Clean and thorough documentation
-
-
-
-## 🏗️ Architecture
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌────────────────────┐
-│   Frontend      │    │   Backend       │    │     Database       │
-│   (Nginx)       │◄──►│   (Node.js)     │◄──►│   (PostgreSQL)     │
-│   Port: 80      │    │   Port: 3000    │    │   Port: 5432       │
-└─────────────────┘    └─────────────────┘    └────────────────────┘
-```
-
-* **Frontend**: Static files via Nginx
-* **Backend**: Node.js/Express API
-* **Database**: PostgreSQL with persistent volume
-* **Reverse Proxy**: Nginx for routing
-
-
-
-## 🛠️ Prerequisites
-
-* Docker Desktop 4.0+
-* Docker Compose 2.0+
-* Git installed
-* 4GB+ available RAM
-
-
-
-## 📦 Installation
-
-### Development Environment
-
-```bash
-# Clone the repository
-git clone https://github.com/reehassan/01_todo_app.git
-cd 01_todo_app
-
-# Install backend dependencies and build
-cd backend
-npm install
-npm run build
-
-# Go back to project root
-cd ..
-
-# Start services
-docker-compose --env-file .env up --build
-```
-
-Access:
-
-* Web: [http://localhost:9090](http://localhost:9090)
-* API Health: `http://localhost:9090/api/health`
-* DB: `localhost:5432` (via pgAdmin or psql)
+The application includes:
+- A **Node.js backend**
+- A **static HTML frontend served by NGINX**
+- A **PostgreSQL database**, all orchestrated securely inside a VPC
 
 ---
 
-### Production Environment
+## 🚀 Features
 
-### 📁 1. Create the Production `.env.production` File
-
-In the root of your project (`01_todo_app/`), create a file named `.env.production` and add the following configuration:
-
-```env
-# .env.production
-NODE_ENV=production
-DB_HOST=db
-DB_USER=todouser
-DB_PASSWORD=yourpassword
-DB_NAME=todoapp
-DB_PORT=5432
-API_PORT=3000
-WEB_PORT=80
-```
-
-> ⚠️ Replace `yourpassword` with a secure password.
+- **Frontend**: Static `index.html` served by **NGINX**, proxying API requests to the backend.
+- **Backend**: Node.js app running on port `3000`, connected to **AWS RDS PostgreSQL**.
+- **Infrastructure**:
+  - Custom VPC with public/private subnets
+  - EC2 instance (`t3.micro`)
+  - RDS PostgreSQL 13.16
+  - Elastic IP for stable EC2 access
+- **Deployment**:
+  - Fully automated using Terraform
+  - EC2 `user_data` script sets up Docker, clones the repo, and runs `docker-compose.prod.yml`
+- **Security**:
+  - Security groups restrict access (port 80 open, port 22 restricted, port 5432 only from EC2)
 
 ---
 
-### 🧱 2. Build Backend Files for Production
+## 🧱 Architecture
 
-Before running the containers, ensure the backend build artifacts are created:
+- **VPC**:
+  - Public Subnet (`us-east-1a`) for EC2
+  - Private Subnet (`us-east-1a`) for RDS
+- **EC2**:
+  - Runs Docker containers for NGINX and backend
+- **RDS**:
+  - PostgreSQL 13.16 with private access
+- **Elastic IP**:
+  - Public access to EC2
+- **Security Groups**:
+  - Port 80 (web), 3000 (backend), 5432 (RDS)
+
+---
+
+## ✅ Prerequisites
+
+- AWS Account with permissions for EC2, RDS, and VPC
+- AWS CLI configured (`aws configure`)
+- Terraform v1.5 or higher
+- Git
+- EC2 Key Pair (e.g., `todo-app-key`)
+
+---
+
+## 📦 Deployment Instructions
+
+### 1. Clone the Repository
 
 ```bash
-cd backend
-npm install
-npm run build
-cd ..
+git clone https://github.com/reehassan/02_todo_app_infra.git
+cd 02_todo_app_infra
+````
+
+---
+
+### 2. Create EC2 Key Pair
+
+```bash
+aws ec2 create-key-pair \
+  --key-name todo-app-key \
+  --query 'KeyMaterial' \
+  --output text \
+  --region us-east-1 > terraform/todo-app-key.pem
+
+chmod 400 terraform/todo-app-key.pem
 ```
 
 ---
 
-### 📦 3. Start the Production Environment
+### 3. Set Database Password
 
-Use Docker Compose with the production configuration:
+Create `terraform/terraform.tfvars`:
+
+```hcl
+db_password = "TodoApp123!"
+```
+
+> ⚠️ Password must be printable ASCII (no `/`, `@`, `"`, or spaces), 8–41 characters.
+
+---
+
+### 4. Deploy with Terraform
 
 ```bash
+cd terraform
+terraform init
+terraform apply
+```
+
+Review the plan and type `yes` to confirm.
+
+---
+
+### 5. Terraform Outputs
+
+* `ec2_public_ip`: Public IP (e.g., `54.82.229.185`)
+* `rds_endpoint`: RDS endpoint (e.g., `todo-app-db.xxxx.us-east-1.rds.amazonaws.com:5432`)
+* `ssh_instructions`: SSH command (e.g., `ssh -i todo-app-key.pem ubuntu@54.82.229.185`)
+
+---
+
+## 🌐 Access the Application
+
+Open in browser:
+
+```
+http://<ec2_public_ip>
+```
+
+---
+
+## 🛠 SSH Access (Optional)
+
+```bash
+ssh -i terraform/todo-app-key.pem ubuntu@<ec2_public_ip>
+```
+
+Check running containers:
+
+```bash
+docker ps
+```
+
+Logs:
+
+```bash
+docker logs <nginx-container-id>
+docker logs <backend-container-id>
+```
+
+---
+
+## 🧩 Troubleshooting
+
+### ❌ App Not Loading
+
+* Verify SG allows port 80:
+
+```bash
+aws ec2 describe-security-groups \
+  --filters "Name=tag:Name,Values=todo-app-ec2-sg" \
+  --region us-east-1 \
+  --query 'SecurityGroups[].IpPermissions[?FromPort==`80`]'
+```
+
+* Restart containers:
+
+```bash
+cd /home/ubuntu/02_todo_app_infra
 docker-compose -f docker-compose.prod.yml --env-file .env.production up --build -d
 ```
 
----
-
-### 🔍 4. Verify Containers Are Running
-
-Check container statuses:
+* Test services:
 
 ```bash
-docker-compose -f docker-compose.prod.yml ps
+curl http://localhost
+curl http://localhost:3000
 ```
-
-View logs if needed:
-
-```bash
-docker-compose -f docker-compose.prod.yml logs -f
-```
-
-## 🎮 Usage
-
-### Web Interface
-
-* Navigate to [http://localhost:80](http://localhost:80)
-* Add, complete, or delete todos using the UI
-
-### API Usage
-
-```bash
-# Get all todos
-curl http://localhost:80/api/todos
-
-# Create todo
-curl -X POST http://localhost:80/api/todos \
-  -H "Content-Type: application/json" \
-  -d '{"text": "Learn Docker"}'
-
-# Update todo
-curl -X PUT http://localhost:80/api/todos/1 \
-  -H "Content-Type: application/json" \
-  -d '{"text": "Learn Docker", "completed": true}'
-
-# Delete todo
-curl -X DELETE http://localhost:80/api/todos/1
-```
-
-
-
-## 🐳 Docker Commands
-
-### General
-
-```bash
-docker-compose up -d
-docker-compose down
-docker-compose logs -f
-docker-compose up --build
-docker-compose down -v
-```
-
-### Development
-
-```bash
-docker-compose exec web sh
-docker-compose exec backend sh
-docker-compose exec db psql -U todouser -d todoapp
-docker-compose exec backend npm test
-```
-
-### Production
-
-```bash
-docker-compose -f docker-compose.prod.yml up -d
-docker-compose -f docker-compose.prod.yml up --scale backend=3
-docker stats
-```
-
-
-
-## 📚 API Documentation
-
-| Method | Endpoint         | Description     |
-| ------ | ---------------- | --------------- |
-| GET    | `/api/todos`     | Fetch all todos |
-| POST   | `/api/todos`     | Create new todo |
-| PUT    | `/api/todos/:id` | Update a todo   |
-| DELETE | `/api/todos/:id` | Delete a todo   |
-| GET    | `/api/health`    | Health check    |
-
-
-## 🔧 Development
-
-### File Structure
-
-```
-01_todo_app/
-├── index.html
-├── backend/
-├── database/
-├── nginx/
-├── resources/
-├── docker-compose.yml
-├── docker-compose.prod.yml
-├── Dockerfile
-├── Dockerfile.multi-stage
-└── docs/
-```
-
-### Hot Reload (Frontend)
-
-Modify files in `resources/` — changes reflect instantly (volumes are mounted).
-
-### Backend Restart
-
-```bash
-docker-compose restart backend
-```
-
-### Reset Database
-
-```bash
-docker-compose down -v
-docker-compose up -d
-```
-
-
-
-## 🚀 Production Deployment
-
-### Checklist
-
-* ✅ Update `.env.production`
-* ✅ Set secure DB passwords
-* ✅ Enable HTTPS (e.g., with Nginx + Certbot)
-* ✅ Add monitoring/logging
-* ✅ Automate backups
-
-### Deploy
-
-```bash
-# Sync code to server
-rsync -av --exclude node_modules . user@server:/app/
-
-# Set env
-cp .env.production .env
-
-# Start services
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-### Docker Hub
-
-```bash
-docker build -t youruser/todo-app:latest .
-docker push youruser/todo-app:latest
-```
-
-
-
-## 🔍 Monitoring & Logging
-
-```bash
-docker stats
-docker-compose ps
-docker-compose logs -f
-docker-compose logs -f backend
-```
-
-Health:
-
-* Web: `/health`
-* API: `/api/health`
-* DB: `pg_isready`
-
-
-
-## 🛠️ Troubleshooting
-
-### Port Conflict
-
-Change ports in `docker-compose.yml`
-
-### DB Not Connecting
-
-```bash
-docker-compose exec db pg_isready -U todouser
-```
-
-### Container Fails
-
-```bash
-docker-compose logs backend
-docker-compose up --build backend
-```
-
-
-## 📊 Performance Optimization
-
-* ✅ Multi-stage builds for small image sizes
-* ✅ `.dockerignore` to reduce context
-* ✅ Alpine base images
-* ✅ Health checks
-* ✅ Resource limits in Compose
 
 ---
 
-## 🔒 Security Best Practices
+### ❌ RDS Not Responding
 
-* Run containers as non-root
-* Read-only filesystems (optional)
-* Environment secrets, not hardcoded values
-* Disable unnecessary ports
-* Harden database access
+Test connectivity:
+
+```bash
+export PGPASSWORD="TodoApp123!"
+psql -h <rds_endpoint> -p 5432 -U todouser -d todoapp -c "\dt"
+```
+
+Reapply schema if needed:
+
+```bash
+psql -h <rds_endpoint> -p 5432 -U todouser -d todoapp -f /home/ubuntu/02_todo_app_infra/database/init.sql
+```
 
 ---
 
-## 🤝 Contributing
+### ❌ SSH Issues
 
-1. Fork the repo
-2. Create a branch: `git checkout -b feature/xyz`
-3. Commit: `git commit -m "Add xyz"`
-4. Push: `git push origin feature/xyz`
-5. Open a Pull Request
+* Ensure `.pem` exists and has correct permissions:
 
+```bash
+chmod 400 terraform/todo-app-key.pem
+```
+
+* Open port 22 in SG if needed:
+
+```hcl
+ingress {
+  from_port   = 22
+  to_port     = 22
+  protocol    = "tcp"
+  cidr_blocks = ["<your-ip>/32"]
+}
+```
+
+Find your IP:
+
+```bash
+curl ifconfig.me
+```
+
+---
+
+### ❌ Docker Build Fails
+
+Check logs:
+
+```bash
+docker-compose -f /home/ubuntu/02_todo_app_infra/docker-compose.prod.yml logs
+```
+
+Ensure the `Dockerfile.multi-stage` and paths in `backend/` are correct.
+
+---
+
+## 🧹 Clean Up
+
+```bash
+cd terraform
+terraform destroy
+```
+
+Confirm with `yes` when prompted. Ensure EC2, RDS, EIP, and VPC are removed from AWS Console.
+
+---
+
+## 🖼 Screenshots
+
+> ![App Architecture](./images/running_app_ss.png)
+
+---
+
+## 🔧 Technologies Used
+
+* **Terraform** – IaC for AWS provisioning
+* **Docker / Docker Compose** – Containerization
+* **AWS** – EC2, RDS, VPC, EIP
+* **NGINX** – Static file server and reverse proxy
+* **Node.js** – Backend API
+* **PostgreSQL** – Database (RDS)
+
+---
 
 ## 📄 License
 
-MIT License. See [LICENSE.md](LICENSE.md) for details.
-
-
-## 🙋‍♂️ Support
-
-* Review logs: `docker-compose logs`
-* Create an issue on GitHub
-
-
-## 🎯 Learning Objectives
-
-* Docker fundamentals
-* Multi-container apps with Compose
-* Multi-stage builds
-* DevOps workflows and automation
-* Secure, production-ready deployments
-
-
-## 📈 Next Steps
-
-* [ ] CI/CD with GitHub Actions
-* [ ] Add SSL/TLS with Let's Encrypt
-* [ ] Integrate log aggregation (ELK or Loki)
-* [ ] Add Prometheus/Grafana monitoring
-* [ ] Database backups & scheduled jobs
-
-
-
-### 🧠 Credit
-
-> This project is based on [@themaxsandelin's](https://github.com/themaxsandelin/todo) simple todo app. Extended by Areeba Hassan with a backend, PostgreSQL database, and Dockerized full stack environment.
-
-
-**Happy shipping! 🚢**
-
+This project is licensed under the **MIT License** – see [`LICENSE.md`](LICENSE.md) for details.
