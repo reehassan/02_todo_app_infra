@@ -9,7 +9,6 @@ services:
       - "80:80"
     depends_on:
       - backend
-      - db
     restart: unless-stopped
     networks:
       - todo-network
@@ -25,14 +24,14 @@ services:
       dockerfile: Dockerfile
     expose:
       - "3000"
-    depends_on:
-      - db
     environment:
       - NODE_ENV=production
-      - DB_HOST=db
-      - DB_USER=todouser
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=todoapp
+      - DB_NAME=${DB_NAME}
+      - DB_PORT=5432
+      - API_PORT=3000
     restart: unless-stopped
     networks:
       - todo-network
@@ -41,26 +40,6 @@ services:
         limits:
           cpus: '1'
           memory: 1G
-
-  db:
-    image: postgres:13-alpine
-    environment:
-      - POSTGRES_USER=todouser
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=todoapp
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-    networks:
-      - todo-network
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-
-volumes:
-  postgres_data:
 
 networks:
   todo-network:
