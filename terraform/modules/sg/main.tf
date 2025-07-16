@@ -1,13 +1,13 @@
 resource "aws_security_group" "ec2_sg" {
-  vpc_id = var.vpc_id
-  name   = "${var.project_name}-ec2-sg"
+  vpc_id      = var.vpc_id
+  name        = "${var.project_name}-ec2-sg"
   description = "Security group for EC2 instance"
 
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["0.0.0.0/0"] # Replace with your public IP
   }
 
   ingress {
@@ -21,7 +21,7 @@ resource "aws_security_group" "ec2_sg" {
     from_port   = 3000
     to_port     = 3000
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    self        = true # Allow traffic from NGINX within the same instance
   }
 
   egress {
@@ -37,8 +37,8 @@ resource "aws_security_group" "ec2_sg" {
 }
 
 resource "aws_security_group" "rds_sg" {
-  vpc_id = var.vpc_id
-  name   = "${var.project_name}-rds-sg"
+  vpc_id      = var.vpc_id
+  name        = "${var.project_name}-rds-sg"
   description = "Security group for RDS instance"
 
   ingress {
